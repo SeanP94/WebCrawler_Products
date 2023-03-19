@@ -5,7 +5,7 @@ The webcrawler code for the product information.
 Project Setup Notes:
 To install all Python libraries for this project in your terminal type
 
-    *pip install -r requirements.txt*
+    pip install -r requirements.txt
 
 In a folder called Secrets outside this directory
 -OverallDirectory
