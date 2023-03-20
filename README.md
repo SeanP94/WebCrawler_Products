@@ -9,14 +9,18 @@ The goal of this portion:
     This will check website like gamestop and maybe Ebay
     Gather if the product is available and if it is at what price.
 
-    This script will work in conjunction with Airflow and Firebase:
-        For Airflow, I will be working towards running this on my Raspberry Pi 4, 4GB with Airflow as the scheduler.
+    TODO:
+    Need to work on parsing XML files either in the android app or on the server via Python
+    (Maybe first implement via Python, then move into Kotlin app when It's working.)
 
-        The data will store in Firebase. The goal is to also initially read the list of products I am tracking and what sites I have found them on first(Will look into building this out)
-        
-    For other information on this overall project:
-        Besides Webcrawling, Firebase, and Airflow. The reason I'm using Firebase, is because this data will be read by an Android App written in Kotlin. Hence, why I'm using Firebase 
-        And it's a cheap database service with a NoSql format that is doable for this project. 
+This script will work in conjunction with Airflow and Firebase:
+    For Airflow, I will be working towards running this on my Raspberry Pi 4, 4GB with Airflow as the scheduler.
+
+    The data will store in Firebase. The goal is to also initially read the list of products I am tracking and what sites I have found them on first(Will look into building this out)
+    
+For other information on this overall project:
+    Besides Webcrawling, Firebase, and Airflow. The reason I'm using Firebase, is because this data will be read by an Android App written in Kotlin. Hence, why I'm using Firebase 
+    And it's a cheap database service with a NoSql format that is doable for this project. 
         
     
 
@@ -39,3 +43,8 @@ The Secrets folder will be where I keep:
 2. . . .
 
 
+Notes....
+Gamestop: Use sitemap
+Target: Use sitemap
+
+Amazon: Seems to be alowed to be searched
