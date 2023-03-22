@@ -1,13 +1,20 @@
 import requests
 import re
+import json
+
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-SECRETS = "../../Secrets/"
+import xml.etree.ElementTree as ET
 
+SECRETS = "../Secrets/"
+
+with open("json/startUrls.json", "r") as file:
+    urls = json.load(file)
 
 # Create the web object that we can interact with.
 browser = webdriver.Chrome(SECRETS.join("webdriver"))
+
 
 def romanToInt(s : str) -> int:
     roman_to_int = {
@@ -69,7 +76,6 @@ def searchXml(root, gameName):
     # Stores each match in a list.
     matches = []
 
-
     for node in gameName.lower().split(" "):
         if node.isdigit() and int(node) < 4000: # Parameter for function is less than 4000.
             gameNameList.append(intToRoman(int(node)))
@@ -95,9 +101,66 @@ def searchXml(root, gameName):
 
     matches.sort(key=lambda key: key[2], reverse=True)
     
-    # This shwos the top 10 of the matches. 
-    for m in matches[:10]:
-        print(m)
+    return matches
+
+
+def getProductMatches(company, userInput):
+    """
+    Takes in the companys name to get the Xml file(s)
+    and parses the information to find the 
+    """
+    if not urls.get(company):
+        print("Invalid company")
+        return False
+    
+    sitemap = urls[company]
+
+    # Some companies, like target have multiple XML's
+    # TODO: Make Target's version with multiple iterations...
+    if type(sitemap) is not list:
+        headers = {"User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"}
+        response = requests.get(sitemap, headers=headers)
+        if not response.status_code:
+            print(f"Error: {response.status_code}")
+            return False
+
+        # Create an XML root to pass into searchXml
+        root = ET.fromstring(response.text)
+        return searchXml(root=root, gameName=userInput)
+              
+
+
+
+class Company:
+    def __init__(self):
+        pass
+    
+    @staticmethod
+    def formatData():
+        """
+        Formats the Json data into the expected data // Or checks the format on how it's sent.
+        """
+        return False
+
+    @staticmethod
+    def saveProduct(jsonObject):
+        """Method is used to return false in a jsonObject to its dictionary"""
+        return False
+
+    @staticmethod
+    def searchProduct():
+        return False
+
+class GameStop(Company):
+    @staticmethod
+    def formatData():
+        return False
+
+    @staticmethod
+    def saveProduct(jsonObject):
+        with open ("../json/gamestop.json", "wb", encoding='utf-8') as file:
+            json.dump(jsonObject)
+
 
 
 # The below code I believe will mostly just be for testing. Data above will be reworked into class structures.
@@ -105,7 +168,25 @@ mainUrlDict = {
     "gamestop" : "https://www.gamestop.com/"
 }
 
+
 browser.get("https://www.gamestop.com/")
 
+userInput = 0
+# Bad engine to help me generate game data.
+while 1:
+    print("*"*50)
+    userInput = input("Please enter name of the game you'd like to keep track of: ")
+    if str(userInput) == "-1":
+        break 
+    matches = getProductMatches("gamestop", userInput)
+    for i, match in enumerate(matches[:10]):
+        print(f"{i}: {match[0]}")
+    
+    userInput = input("Select any of these, or hit -1 to search another game: ")
+    if userInput != "-1":
 
+        # Where I left off. This URL is the one we need to search.
+        scrapeUrl = matches[int(userInput)][1]
+
+    print("*"*50)
 browser.close()
