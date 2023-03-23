@@ -1,11 +1,15 @@
 import requests
 import re
 import json
+from time import sleep
+from datetime import datetime
+import xml.etree.ElementTree as ET
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-import xml.etree.ElementTree as ET
+import pyrebase
+
 
 SECRETS = "../Secrets/"
 
@@ -14,6 +18,75 @@ with open("json/startUrls.json", "r") as file:
 
 # Create the web object that we can interact with.
 browser = webdriver.Chrome(SECRETS.join("webdriver"))
+
+
+def checkGamestop(gameName, url):
+    """
+    Runs the logic for checking Gamestops availability for the game.
+    """
+    addressLoc = "../Secrets/address.json" 
+    # Get my Address from the secret folder.
+    with open(addressLoc) as file:
+        address = json.load(file)
+    
+    browser.get(url)
+
+    # Variables that will be pased into the database 
+    gameAvailability = None
+
+    b =  browser.find_element(By.CLASS_NAME, "component, primary-details-row,  pricing-redesign")
+    gamePrice = b.find_element(By.CLASS_NAME, "actual-price, actual-price-strikethroughable-span").text
+
+    # Get the grouping of where all the buttons live
+    buttonsTag = browser.find_element(By.CLASS_NAME, "cart-and-ipay, divider-line, top-divider")
+
+    verifyAddressButton = buttonsTag.find_element(By.CLASS_NAME, 'btn-check-availability, btn, btn-primary, add-to-cart-redesign')
+    # First check if we need to verify our shipping address.
+    if verifyAddressButton.is_displayed():
+        verifyAddressButton.click()
+        verifyAddressBox = browser.find_element(By.ID, "SDDStoreVerifyModal")
+
+        sleep(2) # Needs to pause for a couple seconds before it continues
+        # Add address in for delivery
+        verifyAddressBox.find_element(By.ID, 'address1').send_keys(address['street'])
+        verifyAddressBox.find_element(By.ID, 'city').send_keys(address['city'])
+        verifyAddressBox.find_element(By.ID, 'state').send_keys(address['state'])
+        verifyAddressBox.find_element(By.ID, 'zipCode').send_keys(address['zip'])
+
+        # Submit form and close the window (Next step will verify if product is unavail/Avail)
+        verifyAddressBox.find_element(By.NAME, 'submit').click()
+        verifyAddressBox.find_element(By.CLASS_NAME, "close, pull-right").click()
+
+
+    purchaseButton = buttonsTag.find_element(By.CLASS_NAME, "add-to-cart, btn, btn-primary, add-to-cart-redesign, all")
+    availableStatus = purchaseButton.get_attribute('innerHTML')
+
+    if availableStatus == 'Not Available':
+        # TODO: Pass to Database Price and that product is not Available.
+        gameAvailability = False
+    else:
+        # TODO: Pass to Database Price and that product is Available.
+        gameAvailability = True
+    insertIntoFirebase(gameName, gamePrice, gameAvailability, "gamestop")
+
+def insertIntoFirebase(gameName, gamePrice, gameAvailability, company):
+    with open("../Secrets/firebaseConfig.json", "r") as file:
+        firebaseConfig = json.load(file)
+
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    currTime = datetime.today().strftime('%m-%d-%Y, %H:%M')
+    database = firebase.database()
+
+    data = {
+        "site" : company,
+        "Price" : gamePrice,
+        "Available" : gameAvailability
+    }
+
+    database.child("GameNames").child(f"{gameName}/{company}/{currTime}").set(data)
+
+
+
 
 
 def romanToInt(s : str) -> int:
