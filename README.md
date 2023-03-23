@@ -2,7 +2,32 @@
 The webcrawler code for the product information.
 
 
+
+
 This repository is apart of a multi-stage Resume project.
+
+The goal for this project is to help me learn about connecting to a NoSQL database like Firebase.
+Using multiple different web gathering tools, like Parsing XML Sitemaps, Scrapping sites, and using an API.
+
+For the other portions:
+Airflow to schedule regular checks of product pages
+Firebase to store, and possibly configure it to better understand it.
+Kotlin Android app to view and get notifications
+
+As I continue to build this project the initial goals are:
+----------------------------------------------------------------------------------------------------------------------
+To setup Gamestops data into a server: X
+Generate the products I want via my home computer: WIP
+Set Airflow up on a Pi at home:
+Determine final Firebase DB schema: WIP
+Begin generic Kotlin app:
+Build out Kotlin App:
+Add more websites:
+----------------------------------------------------------------------------------------------------------------------
+As I update all the projects, I'll try and update all of the README's as well to reflect whats going on in all projects.
+Currently, Webcrawler is the only one setup
+----------------------------------------------------------------------------------------------------------------------
+
 The goal of this portion:
     Is to search specified websites for information on Products. Gather if they're available and at what price.
     For example, I'm attempting to find old DS games like Dragon Quest 4 on the DS.
@@ -46,5 +71,6 @@ The Secrets folder will be where I keep:
 Notes....
 Gamestop: Use sitemap
 Target: Use sitemap
+Ebay: Will use their API.
 
 Amazon: Seems to be alowed to be searched
