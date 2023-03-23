@@ -23,17 +23,21 @@ browser = webdriver.Chrome(SECRETS.join("webdriver"))
 def checkGamestop(gameName, url):
     """
     Runs the logic for checking Gamestops availability for the game.
+    Code cannot be reused, since it's specific to Gamestops Schema
+    
+    **This code should be the main driver, and should be expanded for searching
+    Gamestop Product page**
+
     """
     addressLoc = "../Secrets/address.json" 
     # Get my Address from the secret folder.
     with open(addressLoc) as file:
         address = json.load(file)
     
+    # Go to the website
     browser.get(url)
 
-    # Variables that will be pased into the database 
-    gameAvailability = None
-
+    # Get the gameprice
     b =  browser.find_element(By.CLASS_NAME, "component, primary-details-row,  pricing-redesign")
     gamePrice = b.find_element(By.CLASS_NAME, "actual-price, actual-price-strikethroughable-span").text
 
@@ -61,6 +65,10 @@ def checkGamestop(gameName, url):
     purchaseButton = buttonsTag.find_element(By.CLASS_NAME, "add-to-cart, btn, btn-primary, add-to-cart-redesign, all")
     availableStatus = purchaseButton.get_attribute('innerHTML')
 
+
+    # Variables that will be pased into the database 
+    gameAvailability = None
+
     if availableStatus == 'Not Available':
         # TODO: Pass to Database Price and that product is not Available.
         gameAvailability = False
@@ -70,19 +78,28 @@ def checkGamestop(gameName, url):
     insertIntoFirebase(gameName, gamePrice, gameAvailability, "gamestop")
 
 def insertIntoFirebase(gameName, gamePrice, gameAvailability, company):
+    """
+    Formats the Insert statement for the Firebase Database.
+    TODO: Firebase DB is in Dev mode, need to reconfigure with
+    permissions.
+    """
+
+    # Secrets stores the config for the Firebase connection
     with open("../Secrets/firebaseConfig.json", "r") as file:
         firebaseConfig = json.load(file)
 
+    # Establish firebase connection
     firebase = pyrebase.initialize_app(firebaseConfig)
-    currTime = datetime.today().strftime('%m-%d-%Y, %H:%M')
     database = firebase.database()
 
+    # Prep insert data
+    currTime = datetime.today().strftime('%m-%d-%Y, %H:%M')
     data = {
         "site" : company,
         "Price" : gamePrice,
         "Available" : gameAvailability
     }
-
+    # Insert the data into firebase.
     database.child("GameNames").child(f"{gameName}/{company}/{currTime}").set(data)
 
 
