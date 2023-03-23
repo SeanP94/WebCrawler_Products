@@ -11,13 +11,17 @@ from selenium.webdriver.common.by import By
 import pyrebase
 
 
-SECRETS = "../Secrets/"
+SECRETS = "/home/krayt/ResumeProj/Secrets/"
+
+# Stores on check, the XML roots so we only ever have to ping it once
+roots = {}
+
 
 with open("json/startUrls.json", "r") as file:
     urls = json.load(file)
 
 # Create the web object that we can interact with.
-browser = webdriver.Chrome(SECRETS.join("webdriver"))
+browser = webdriver.Chrome(SECRETS+"webdriver")
 
 
 def checkGamestop(gameName, url):
@@ -29,7 +33,7 @@ def checkGamestop(gameName, url):
     Gamestop Product page**
 
     """
-    addressLoc = "../Secrets/address.json" 
+    addressLoc = SECRETS + "address.json"
     # Get my Address from the secret folder.
     with open(addressLoc) as file:
         address = json.load(file)
@@ -75,6 +79,7 @@ def checkGamestop(gameName, url):
     else:
         # TODO: Pass to Database Price and that product is Available.
         gameAvailability = True
+    
     insertIntoFirebase(gameName, gamePrice, gameAvailability, "gamestop")
 
 def insertIntoFirebase(gameName, gamePrice, gameAvailability, company):
@@ -85,7 +90,7 @@ def insertIntoFirebase(gameName, gamePrice, gameAvailability, company):
     """
 
     # Secrets stores the config for the Firebase connection
-    with open("../Secrets/firebaseConfig.json", "r") as file:
+    with open(SECRETS+"firebaseConfig.json", "r") as file:
         firebaseConfig = json.load(file)
 
     # Establish firebase connection
@@ -101,8 +106,9 @@ def insertIntoFirebase(gameName, gamePrice, gameAvailability, company):
     }
     # Insert the data into firebase.
     database.child("GameNames").child(f"{gameName}/{company}/{currTime}").set(data)
-
-
+    
+    # Print so I don't have to look at Firebase Every time... At least for now...
+    print(f"{gameName} has been inserted under {company} as {gameAvailability}, for {gamePrice}")
 
 
 
@@ -158,9 +164,26 @@ def intToRoman(num: int) -> str:
 
     return outString.lower()
 
+def getXml(rootUrl):
+    headers = {"User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"}
+    response = requests.get(rootUrl, headers=headers)
+    assert response.status_code == 200
+    return ET.fromstring(response.text)
+
+def searchXml(rootUrl, gameName):
+    global roots
+    # If we haven't looked at this XML yet, pull it.
+    if not roots.get(rootUrl):
+        roots[rootUrl] = getXml(rootUrl)
 
 
-def searchXml(root, gameName):
+        print("Created gamestop root")
+    #Delete this after first test.
+    else:
+        print("Found gamestop root")
+    
+    root = roots[rootUrl]
+
     # Stores each word in the gameName
     gameNameList = []
     # Stores each match in a list.
@@ -176,10 +199,11 @@ def searchXml(root, gameName):
         url = element.text
         productString = url.split("/")[-2]
         # Removes patterns such as ---playstation-4...
+        """ # Pattern actualyl seems more significant sadly.
         if re.search("---", productString):
             i = productString.find("---")
             productString = productString[:i]
-            
+        """
         count = 0
         for word in gameNameList:
             # regex issue is if you have a decimal number like 4.4 on Dragonquest 4
@@ -192,6 +216,21 @@ def searchXml(root, gameName):
     matches.sort(key=lambda key: key[2], reverse=True)
     
     return matches
+
+def gameSearchDriver() -> bool:
+    
+    gameName = input("Please enter a game name, or -1 to quit: ")
+    if gameName == '-1':
+        return False
+
+    # GameStop:
+    GameStop.searchLogic(gameName=gameName)
+    # End of Gamestop Logic
+
+    # To continue, we return True.
+    return True
+
+
 
 
 def getProductMatches(company, userInput):
@@ -219,26 +258,14 @@ def getProductMatches(company, userInput):
         return searchXml(root=root, gameName=userInput)
               
 
-
-
 class Company:
     def __init__(self):
         pass
     
-    @staticmethod
-    def formatData():
-        """
-        Formats the Json data into the expected data // Or checks the format on how it's sent.
-        """
-        return False
+
 
     @staticmethod
-    def saveProduct(jsonObject):
-        """Method is used to return false in a jsonObject to its dictionary"""
-        return False
-
-    @staticmethod
-    def searchProduct():
+    def searchLogic(gameName):
         return False
 
 class GameStop(Company):
@@ -247,36 +274,18 @@ class GameStop(Company):
         return False
 
     @staticmethod
-    def saveProduct(jsonObject):
-        with open ("../json/gamestop.json", "wb", encoding='utf-8') as file:
-            json.dump(jsonObject)
+    def searchLogic(gameName):
+        gsMatches = searchXml(urls['gamestop'], gameName=gameName)
+        # gsMatches format (gameName, url, count of matched words. (Used in sorting))
+        gsMax = min(10, len(gsMatches))
 
-
-
-# The below code I believe will mostly just be for testing. Data above will be reworked into class structures.
-mainUrlDict = {
-    "gamestop" : "https://www.gamestop.com/"
-}
-
-
-browser.get("https://www.gamestop.com/")
-
-userInput = 0
-# Bad engine to help me generate game data.
-while 1:
-    print("*"*50)
-    userInput = input("Please enter name of the game you'd like to keep track of: ")
-    if str(userInput) == "-1":
-        break 
-    matches = getProductMatches("gamestop", userInput)
-    for i, match in enumerate(matches[:10]):
-        print(f"{i}: {match[0]}")
-    
-    userInput = input("Select any of these, or hit -1 to search another game: ")
-    if userInput != "-1":
-
-        # Where I left off. This URL is the one we need to search.
-        scrapeUrl = matches[int(userInput)][1]
-
-    print("*"*50)
-browser.close()
+        # Print a list of game names to select from
+        for i, game in enumerate(gsMatches[:gsMax]):
+            print(f"{i}. {game[0]}")
+        userInput = int(input(f"Please select a number between 0-{gsMax-1} or anything else to skip: "))
+        # Since GS is our only website currently, we want to skip this if anything else is inputed.
+        if userInput < 0 or userInput >= gsMax:
+            return True
+        gameData = gsMatches[userInput]
+        checkGamestop(gameName, gameData[1])
+        #Gamestop.ProductLogic(gameName)
